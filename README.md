@@ -680,8 +680,12 @@ npm run start
 
 Packed mode:
 ```
-npm run startPacked
+npm run start:packed:windows
 ```
+
+For the day-to-day development loop (watch mode, Angular dev server, local test
+runner) and for what can be worked on from which operating system, see
+[DEVELOPMENT.md](DEVELOPMENT.md).
 
 <br><a name="disclaimer"></a>  
 ## Disclaimer <hr>
