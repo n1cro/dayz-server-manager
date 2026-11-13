@@ -206,7 +206,70 @@ describe('Test class RCON', () => {
         await rcon.kick('123');
         expect(sentCommand).to.include('kick');
         expect(sentCommand).to.include('123');
+
+        await rcon.kick('123', 'change your name');
+        expect(sentCommand).to.equal('kick 123 change your name');
         
+    });
+
+    it('RCON-parsePlayerConnected', async () => {
+
+        const rcon = injector.resolve(RCON);
+
+        expect(rcon.parsePlayerConnected('Player #42 Survivor (192.168.1.5:2304) connected')).to.deep.equal({
+            id: '42',
+            name: 'Survivor',
+            ip: '192.168.1.5',
+            port: '2304',
+        });
+
+        // names may contain spaces, brackets and the word 'connected'
+        expect(rcon.parsePlayerConnected('Player #7 [TAG] not connected yet (10.0.0.1:2302) connected')).to.deep.equal({
+            id: '7',
+            name: '[TAG] not connected yet',
+            ip: '10.0.0.1',
+            port: '2302',
+        });
+
+        expect(rcon.parsePlayerConnected('Verified GUID (b57e4f5d) of player #42 Survivor')).to.deep.equal({
+            id: '42',
+            name: 'Survivor',
+            beguid: 'b57e4f5d',
+        });
+
+        expect(rcon.parsePlayerConnected('Player #42 Survivor disconnected')).to.be.null;
+        expect(rcon.parsePlayerConnected('RCon admin #0 (127.0.0.1:2304) logged in')).to.be.null;
+        expect(rcon.parsePlayerConnected('')).to.be.null;
+        expect(rcon.parsePlayerConnected(undefined as any)).to.be.null;
+
+    });
+
+    it('RCON-emits player connected', async () => {
+
+        const rcon = await startRCON();
+
+        const connected: any[] = [];
+        eventBus.on(
+            InternalEventTypes.RCON_PLAYER_CONNECTED,
+            async (player) => {
+                connected.push(player);
+            },
+        );
+
+        const messageListener = getSocketListener(socket, 'message');
+        const message = Buffer.alloc(5 + 'Player #3 Survivor (127.0.0.1:2304) connected'.length);
+        message.writeUInt8(0xFF, 0);
+        message.writeUInt8(0x02, 1);
+        message.writeUInt8(0, 2);
+        message.write('Player #3 Survivor (127.0.0.1:2304) connected', 3);
+        messageListener!(createResponse(message.slice(0, 3 + 'Player #3 Survivor (127.0.0.1:2304) connected'.length)));
+
+        await sleep(10);
+
+        expect(connected.length).to.equal(1);
+        expect(connected[0].id).to.equal('3');
+        expect(connected[0].name).to.equal('Survivor');
+
     });
 
     it('RCON-players', async () => {

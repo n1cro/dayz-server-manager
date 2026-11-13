@@ -114,9 +114,9 @@ export class Interface extends IService {
             ['kick', RequestTemplate.build({
                 method: 'post',
                 level: 'moderate',
-                params: [{ name: 'player' }],
+                params: [{ name: 'player' }, { name: 'reason', optional: true }],
                 noResponse: true,
-                action: (req, params) => this.rcon.kick(params.player),
+                action: (req, params) => this.rcon.kick(params.player, params.reason),
             })],
             ['ban', RequestTemplate.build({
                 method: 'post',

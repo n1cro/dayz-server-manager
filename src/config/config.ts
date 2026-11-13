@@ -430,6 +430,52 @@ export class Hook {
 
 }
 
+/* eslint-disable @typescript-eslint/naming-convention */
+// eslint-disable-next-line no-shadow
+export enum PlayerNameFilterMatchTypeEnum {
+    contains = 'contains',
+    exact = 'exact',
+    regex = 'regex'
+}
+
+export type PlayerNameFilterMatchType = keyof typeof PlayerNameFilterMatchTypeEnum;
+/* eslint-enable @typescript-eslint/naming-convention */
+
+
+export class PlayerNameFilterRule {
+
+    /**
+     * The pattern the player name is matched against
+     *
+     * @required
+     */
+    public pattern!: string;
+
+    /**
+     * How the pattern is matched against the player name
+     * Can be one of:
+     * 'contains' - the name contains the pattern anywhere (default)
+     * 'exact' - the whole name equals the pattern
+     * 'regex' - the pattern is a regular expression
+     *
+     * Matching is always case insensitive.
+     */
+    public matchType?: PlayerNameFilterMatchType = 'contains';
+
+    /**
+     * Kick reason shown to the player
+     *
+     * Falls back to playerNameFilterReason if not set
+     */
+    public reason?: string;
+
+    /**
+     * Optional note for admins, not used by the manager
+     */
+    public comment?: string;
+
+}
+
 export class WorkshopMod {
 
     public workshopId!: string;
@@ -1127,6 +1173,53 @@ export class Config {
      * Default is 30 days
      */
     public metricMaxAge: number = 2_592_000_000;
+
+    // /////////////////////////// Moderation /////////////////////////////////
+    /**
+     * Whether blacklisted player names are kicked or not
+     */
+    public playerNameFilterEnabled: boolean = false;
+
+    /**
+     * Default kick reason for blacklisted player names
+     *
+     * Used whenever the matching rule does not define a reason of its own.
+     */
+    public playerNameFilterReason: string = 'Please change your player name';
+
+    /**
+     * Player names which are not allowed on this server
+     *
+     * Whenever a player connects, their name is matched against these rules
+     * and they are kicked if any of them matches.
+     *
+     * Example:
+     * <pre>
+     * ...
+     * {
+     *   "pattern": "admin",
+     *   "matchType": "contains"
+     * },
+     * {
+     *   "pattern": "^\\s*$",
+     *   "matchType": "regex",
+     *   "reason": "Empty names are not allowed"
+     * }
+     * ...
+     * </pre>
+     */
+    public playerNameFilter: PlayerNameFilterRule[] = [];
+
+    /**
+     * Time (in ms) between each sweep of the player list for blacklisted names
+     *
+     * The filter reacts to connect events reported by RCon, but those are sent
+     * over UDP and are lost when the manager is not connected (i.e. while it is
+     * restarting). The sweep catches whoever slipped through.
+     *
+     * Set to 0 to only rely on connect events.
+     */
+    public playerNameFilterPollIntervall: number = 60000;
 
     // /////////////////////////// Hooks ///////////////////////////////////////
     /**

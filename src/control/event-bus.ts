@@ -9,6 +9,7 @@ import { ServerState } from '../types/monitor';
 import { LogEntryEvent } from '../types/log-reader';
 import { MetricEntryEvent } from '../types/metrics';
 import { DiscordMessage } from '../types/discord';
+import { RconPlayerConnected } from '../types/rcon';
 import { GameUpdatedStatus, ModUpdatedStatus } from '../types/steamcmd';
 import { TrackedOperation } from '../types/operations';
 
@@ -30,6 +31,7 @@ export class EventBus extends IService {
 
     public emit(name: InternalEventTypes.DISCORD_MESSAGE, message: DiscordMessage): void;
     public emit(name: InternalEventTypes.MONITOR_STATE_CHANGE, newState: ServerState, previousState: ServerState): void;
+    public emit(name: InternalEventTypes.RCON_PLAYER_CONNECTED, player: RconPlayerConnected): void;
     public emit(name: InternalEventTypes.METRIC_ENTRY, metricEntryEvent: MetricEntryEvent): void;
     public emit(name: InternalEventTypes.LOG_ENTRY, logEntryEvent: LogEntryEvent): void;
     public emit(name: InternalEventTypes.MOD_UPDATED, status: ModUpdatedStatus): void;
@@ -46,6 +48,7 @@ export class EventBus extends IService {
 
     public on(name: InternalEventTypes.DISCORD_MESSAGE, listener: (message: DiscordMessage) => Promise<any>): Listener;
     public on(name: InternalEventTypes.MONITOR_STATE_CHANGE, listener: (newState: ServerState, previousState: ServerState) => Promise<any>): Listener;
+    public on(name: InternalEventTypes.RCON_PLAYER_CONNECTED, listener: (player: RconPlayerConnected) => Promise<any>): Listener;
     public on(name: InternalEventTypes.METRIC_ENTRY, listener: (metricEntryEvent: MetricEntryEvent) => Promise<any>): Listener;
     public on(name: InternalEventTypes.LOG_ENTRY, listener: (logEntryEvent: LogEntryEvent) => Promise<any>): Listener;
     public on(name: InternalEventTypes.MOD_UPDATED, listener: (status: ModUpdatedStatus) => Promise<any>): Listener;

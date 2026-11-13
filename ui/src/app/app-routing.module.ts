@@ -48,6 +48,12 @@ const routes: Routes = [
             import('../modules/maintenance/maintenance-routing.module').then((m) => m.MaintenanceRoutingModule),
     },
     {
+        path: 'dashboard/moderation',
+        canActivate: [AuthGuard],
+        loadChildren: () =>
+            import('../modules/moderation/moderation-routing.module').then((m) => m.ModerationRoutingModule),
+    },
+    {
         path: 'dashboard/settings',
         canActivate: [AuthGuard],
         loadChildren: () =>

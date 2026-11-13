@@ -15,3 +15,14 @@ export interface RconBan {
     time: string;
     reason: string;
 }
+
+export interface RconPlayerConnected {
+    /**
+     * The player slot as reported by battleye, used to address the player in rcon commands
+     */
+    id: string;
+    name: string;
+    ip?: string;
+    port?: string;
+    beguid?: string;
+}

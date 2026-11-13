@@ -1,0 +1,137 @@
+<sb-layout-dashboard>
+    <sb-dashboard-head title="Moderation" [hideBreadcrumbs]="false"></sb-dashboard-head>
+    <div class="ops-console" [attr.aria-busy]="loading || saving">
+        <header class="console-heading">
+            <div>
+                <span class="eyebrow">PLAYER MODERATION</span>
+                <h2>Name blacklist</h2>
+                <p>Players whose name matches any rule are kicked as soon as they connect.</p>
+            </div>
+            <div class="console-state" [class.is-busy]="loading || saving" role="status" aria-live="polite">
+                <span class="state-dot" aria-hidden="true"></span>
+                {{ loading ? 'Loading config' : (saving ? 'Saving' : 'Ready') }}
+            </div>
+        </header>
+
+        <div *ngIf="outcomeBadge"
+             class="operation-result"
+             [class.is-success]="outcomeBadge.success"
+             [class.is-failure]="!outcomeBadge.success"
+             role="alert">
+            <fa-icon [icon]='["fas", outcomeBadge.success ? "info" : "exclamation-triangle"]'></fa-icon>
+            <span>{{ outcomeBadge.message }}</span>
+        </div>
+
+        <form *ngIf="config" (ngSubmit)="onSubmit()" #moderationForm="ngForm">
+            <section class="operation-panel" aria-labelledby="filter-title">
+                <div class="panel-heading">
+                    <span class="panel-icon"><fa-icon [icon]='["fas", "user-slash"]'></fa-icon></span>
+                    <div>
+                        <span class="risk-label safe">AUTOMATIC</span>
+                        <h3 id="filter-title">Blacklisted names</h3>
+                        <p>Matching is case insensitive and runs on every connect.</p>
+                    </div>
+                </div>
+
+                <div class="field-grid">
+                    <label class="console-check" for="playerNameFilterEnabled">
+                        <input id="playerNameFilterEnabled"
+                               type="checkbox"
+                               name="playerNameFilterEnabled"
+                               [(ngModel)]="config.playerNameFilterEnabled">
+                        <span><strong>Enable the filter</strong><small>While disabled no player is kicked, the rules below are kept.</small></span>
+                    </label>
+                    <div class="field-group">
+                        <label for="playerNameFilterReason">Default kick reason</label>
+                        <input class="form-control"
+                               id="playerNameFilterReason"
+                               name="playerNameFilterReason"
+                               [(ngModel)]="config.playerNameFilterReason"
+                               placeholder="Please change your player name (manager default)">
+                        <p class="field-help">Shown to the player unless the matching rule defines its own reason.</p>
+                    </div>
+                    <div class="field-group">
+                        <label for="playerNameFilterPollIntervall">Sweep interval (ms)</label>
+                        <input type="number"
+                               class="form-control"
+                               id="playerNameFilterPollIntervall"
+                               name="playerNameFilterPollIntervall"
+                               min="0"
+                               [(ngModel)]="config.playerNameFilterPollIntervall">
+                        <p class="field-help">Re-checks the player list to catch connects the manager missed. 0 disables the sweep, empty keeps the manager default.</p>
+                    </div>
+                </div>
+
+                <div class="repeatable-block">
+                    <div class="repeatable-heading">
+                        <div>
+                            <h4>Rules</h4>
+                            <p class="field-help">The first matching rule decides the kick reason.</p>
+                        </div>
+                        <button type="button" class="btn btn-add" (click)="addRule()">
+                            <fa-icon class="me-1" [icon]='["fas", "plus-circle"]'></fa-icon>Add rule
+                        </button>
+                    </div>
+
+                    <div class="empty-state" *ngIf="rules.length === 0">No names are blacklisted.</div>
+
+                    <div class="repeatable-row rule-row"
+                         *ngFor="let rule of rules; let idx = index"
+                         [class.has-error]="!!ruleError(rule)">
+                        <div class="field-group compact">
+                            <label [for]="'rulePattern-' + idx">Pattern</label>
+                            <input class="form-control"
+                                   [id]="'rulePattern-' + idx"
+                                   required
+                                   [(ngModel)]="rule.pattern"
+                                   [ngModelOptions]="{standalone: true}"
+                                   placeholder="admin">
+                        </div>
+                        <div class="field-group compact">
+                            <label [for]="'ruleMatchType-' + idx">Match</label>
+                            <select class="form-select"
+                                    [id]="'ruleMatchType-' + idx"
+                                    [(ngModel)]="rule.matchType"
+                                    [ngModelOptions]="{standalone: true}">
+                                <option *ngFor="let type of matchTypes" [ngValue]="type.value">{{ type.label }}</option>
+                            </select>
+                        </div>
+                        <div class="field-group compact">
+                            <label [for]="'ruleReason-' + idx">Reason</label>
+                            <input class="form-control"
+                                   [id]="'ruleReason-' + idx"
+                                   [(ngModel)]="rule.reason"
+                                   [ngModelOptions]="{standalone: true}"
+                                   [placeholder]="defaultReasonPlaceholder">
+                        </div>
+                        <div class="field-group compact">
+                            <label [for]="'ruleComment-' + idx">Note</label>
+                            <input class="form-control"
+                                   [id]="'ruleComment-' + idx"
+                                   [(ngModel)]="rule.comment"
+                                   [ngModelOptions]="{standalone: true}"
+                                   placeholder="Optional, for admins only">
+                        </div>
+                        <button class="btn btn-icon btn-remove row-remove"
+                                type="button"
+                                aria-label="Delete rule"
+                                (click)="removeRule(idx)">
+                            <fa-icon [icon]='["fas", "trash"]'></fa-icon>
+                        </button>
+                        <p class="rule-error" *ngIf="ruleError(rule)">{{ ruleError(rule) }}</p>
+                    </div>
+                </div>
+
+                <div class="console-actions">
+                    <button class="console-button primary"
+                            type="submit"
+                            [disabled]="loading || saving || hasErrors">Save</button>
+                    <button class="console-button"
+                            type="button"
+                            [disabled]="loading || saving"
+                            (click)="reset()">Discard changes</button>
+                </div>
+            </section>
+        </form>
+    </div>
+</sb-layout-dashboard>

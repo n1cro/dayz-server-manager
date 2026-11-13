@@ -26,6 +26,7 @@ import { Interface } from '../interface/interface';
 import { DiscordMessageHandler } from '../interface/discord-message-handler';
 import { REST } from '../interface/rest';
 import { MetricsCollector } from '../services/metrics-collector';
+import { PlayerNameFilter } from '../services/player-name-filter';
 import { IngameREST } from '../interface/ingame-rest';
 import { SyberiaCompat } from '../services/syberia-compat';
 import { DiscordEventConverter } from '../services/discord-event-converter';
@@ -91,6 +92,11 @@ import { NodeRegistry } from '../services/node-registry';
     {
     token: Operations,
     useClass: Operations,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
+    {
+    token: PlayerNameFilter,
+    useClass: PlayerNameFilter,
     options: { lifecycle: Lifecycle.Singleton },
     },
 

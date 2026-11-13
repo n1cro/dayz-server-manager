@@ -3,7 +3,7 @@ import * as dgram from 'dgram';
 import * as crc32 from 'buffer-crc32';
 import * as path from 'path';
 import { LogLevel } from '../util/logger';
-import { RconBan, RconPlayer } from '../types/rcon';
+import { RconBan, RconPlayer, RconPlayerConnected } from '../types/rcon';
 import { IStatefulService } from '../types/service';
 import { ServerState } from '../types/monitor';
 import { matchRegex } from '../util/match-regex';
@@ -220,6 +220,19 @@ export class RCON extends IStatefulService {
 
     private duplicateMessageCache: string[] = [];
     private duplicateMessageCacheSize: number = 3;
+
+    /**
+     * Battleye announces a connecting player twice:
+     *
+     *   Player #42 Survivor (127.0.0.1:2304) connected
+     *   Verified GUID (abc123) of player #42 Survivor
+     *
+     * The first one arrives before the player is fully registered, so commands
+     * addressing them can still be rejected. Both are reported, consumers are
+     * expected to cope with being told about the same player twice.
+     */
+    private readonly PLAYER_CONNECTED_REGEX = /^Player #(\d+) (.*) \((\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b):(\d+)\) connected$/i;
+    private readonly PLAYER_VERIFIED_REGEX = /^Verified GUID \(([0-9a-f]+)\) of player #(\d+) (.*)$/i;
 
     private stateListener?: Listener;
 
@@ -519,8 +532,8 @@ export class RCON extends IStatefulService {
             }) ?? [];
     }
 
-    public async kick(player: string): Promise<void> {
-        await this.command(`kick ${player}`);
+    public async kick(player: string, reason?: string): Promise<void> {
+        await this.command(reason ? `kick ${player} ${reason}` : `kick ${player}`);
     }
 
     public async kickAll(): Promise<void> {
@@ -776,6 +789,38 @@ export class RCON extends IStatefulService {
                 message,
             },
         );
+
+        const connectedPlayer = this.parsePlayerConnected(message);
+        if (connectedPlayer) {
+            this.eventBus.emit(
+                InternalEventTypes.RCON_PLAYER_CONNECTED,
+                connectedPlayer,
+            );
+        }
+    }
+
+    public parsePlayerConnected(message: string): RconPlayerConnected | null {
+
+        const connected = this.PLAYER_CONNECTED_REGEX.exec(message?.trim() ?? '');
+        if (connected) {
+            return {
+                id: connected[1],
+                name: connected[2],
+                ip: connected[3],
+                port: connected[4],
+            };
+        }
+
+        const verified = this.PLAYER_VERIFIED_REGEX.exec(message?.trim() ?? '');
+        if (verified) {
+            return {
+                id: verified[2],
+                name: verified[3],
+                beguid: verified[1],
+            };
+        }
+
+        return null;
     }
 
     public steam64ToDayZID(steam64Id: string): string {

@@ -10,6 +10,7 @@ export const sideNavSections: SideNavSection[] = [
         items: [
             'system',
             'players',
+            'moderation',
             'maintenance',
         ],
     },
@@ -51,6 +52,11 @@ export const sideNavItems: SideNavItems = {
         icon: 'user',
         text: 'Players',
         link: '/dashboard/players',
+    },
+    moderation: {
+        icon: 'user-slash',
+        text: 'Moderation',
+        link: '/dashboard/moderation',
     },
     audit: {
         icon: 'exclamation-triangle',
