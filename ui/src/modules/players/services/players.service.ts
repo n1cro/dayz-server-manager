@@ -115,7 +115,7 @@ export class PlayersService {
         protected appCommon: AppCommonService,
     ) {
         void this.loadLists();
-        void this.listenToPlayerChanges();
+        this.listenToPlayerChanges();
 
         this.state$
             .pipe(
@@ -141,42 +141,52 @@ export class PlayersService {
 
     }
 
-    protected async listenToPlayerChanges(): Promise<void> {
-        const [rconPlayers, ingamePlayers] = await Promise.all([
-            firstValueFrom(this.appCommon.getApiFetcher<
-                MetricTypeEnum.PLAYERS,
-                MetricWrapper<RconPlayer[]>
-            >(MetricTypeEnum.PLAYERS).data
-                .pipe(
-                    filter((x) => !!x?.length),
-                    first(),
-                )),
-            firstValueFrom(this.appCommon.getApiFetcher<
-                MetricTypeEnum.INGAME_PLAYERS,
-                MetricWrapper<IngameReportEntry[]>
-            >(MetricTypeEnum.INGAME_PLAYERS)!.data
-                .pipe(
-                    filter((x) => !!x?.length),
-                    first(),
-                )),
-        ]);
-
-        const uniqueRconPlayers = new Map<string, RconPlayer>();
-        rconPlayers?.forEach((x) => x.value?.forEach((y) => uniqueRconPlayers.set(y.beguid, y)));
-        uniqueRconPlayers.forEach((x) => this.updatePlayerWithRcon(x));
-
-        const uniqueIngamePlayers = new Map<string, IngameReportEntry>();
-        ingamePlayers?.forEach((x) => x.value?.forEach((y) => {
-            if (y.id2) uniqueIngamePlayers.set(y.id2!, y);
-        }));
-        uniqueIngamePlayers.forEach((x) => this.updatePlayerWithIngame(x));
-
-        this._search$.next(undefined);
-
-        this.appCommon.getApiFetcher<
+    /**
+     * Seeds the known players from the history of both metrics and then
+     * follows them live.
+     *
+     * The two metrics must never gate each other. INGAME_PLAYERS is only ever
+     * produced by the ingame report mod, so on a server that does not run it -
+     * or has not reported yet - waiting for it left every player list
+     * permanently empty, even though RCON was delivering players all along.
+     */
+    protected listenToPlayerChanges(): void {
+        const rconMetric = this.appCommon.getApiFetcher<
             MetricTypeEnum.PLAYERS,
             MetricWrapper<RconPlayer[]>
-        >(MetricTypeEnum.PLAYERS)!.latestData.subscribe(
+        >(MetricTypeEnum.PLAYERS);
+        const ingameMetric = this.appCommon.getApiFetcher<
+            MetricTypeEnum.INGAME_PLAYERS,
+            MetricWrapper<IngameReportEntry[]>
+        >(MetricTypeEnum.INGAME_PLAYERS);
+
+        rconMetric.data
+            .pipe(
+                filter((x) => !!x?.length),
+                first(),
+            )
+            .subscribe((rconPlayers) => {
+                const uniqueRconPlayers = new Map<string, RconPlayer>();
+                rconPlayers?.forEach((x) => x.value?.forEach((y) => uniqueRconPlayers.set(y.beguid, y)));
+                uniqueRconPlayers.forEach((x) => this.updatePlayerWithRcon(x));
+                this._search$.next(undefined);
+            });
+
+        ingameMetric.data
+            .pipe(
+                filter((x) => !!x?.length),
+                first(),
+            )
+            .subscribe((ingamePlayers) => {
+                const uniqueIngamePlayers = new Map<string, IngameReportEntry>();
+                ingamePlayers?.forEach((x) => x.value?.forEach((y) => {
+                    if (y.id2) uniqueIngamePlayers.set(y.id2!, y);
+                }));
+                uniqueIngamePlayers.forEach((x) => this.updatePlayerWithIngame(x));
+                this._search$.next(undefined);
+            });
+
+        rconMetric.latestData.subscribe(
             (data) => {
                 if (data?.value) {
                     data.value.forEach((x) => this.updatePlayerWithRcon(x));
@@ -185,18 +195,10 @@ export class PlayersService {
                 }
             }
         );
-        this.appCommon.getApiFetcher<
-            MetricTypeEnum.INGAME_PLAYERS,
-            MetricWrapper<IngameReportEntry[]>
-        >(MetricTypeEnum.INGAME_PLAYERS)!.latestData.subscribe(
+        ingameMetric.latestData.subscribe(
             (data) => {
                 if (data?.value) {
                     data.value.forEach((x) => this.updatePlayerWithIngame(x));
-                    this.currentPlayers = data.value
-                        .map((x) => this.knownPlayers.get(
-                            this.steam64ToBEGUID(x.id2!)
-                        )!)
-                        .filter((x) => !!x);
                     this._search$.next(undefined);
                 }
             }

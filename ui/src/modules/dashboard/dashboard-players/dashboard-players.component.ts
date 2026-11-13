@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { PlayersService } from '../../players/services/players.service';
 
 @Component({
     standalone: false,
@@ -7,6 +8,10 @@ import { Component, OnInit } from '@angular/core';
     styleUrls: ['dashboard-players.component.scss'],
 })
 export class DashboardPlayersComponent implements OnInit {
+
+    public constructor(
+        public playerService: PlayersService,
+    ) {}
 
     public ngOnInit(): void {
         // ignore

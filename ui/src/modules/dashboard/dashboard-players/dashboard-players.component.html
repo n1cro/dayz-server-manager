@@ -12,7 +12,7 @@
             <small>Current session</small>
         </div>
         <div class="card-body" role="region" aria-labelledby="players-heading" tabindex="0">
-            <sb-player-table></sb-player-table>
+            <sb-player-table [players$]="playerService.players$" [total$]="playerService.total$"></sb-player-table>
         </div>
     </sb-card>
 </section>
