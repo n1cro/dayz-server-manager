@@ -507,6 +507,14 @@ export class RCON extends IStatefulService {
         return this.command('players');
     }
 
+    /**
+     * Battleye prints the guid verification state in brackets behind the guid,
+     * '(OK)' once it is verified and '(?)' while it is not. Matching \\w+ there
+     * silently dropped every player who had just connected and was still
+     * waiting on verification.
+     */
+    private readonly PLAYER_LIST_REGEX = /(\d+)\s+(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+\b)\s+(\d+)\s+([0-9a-fA-F]+)\((?:[^)]*)\)\s([\S ]+)$/gim;
+
     public async getPlayers(): Promise<RconPlayer[]> {
 
         const data = await this.getPlayersRaw();
@@ -515,8 +523,8 @@ export class RCON extends IStatefulService {
             return [];
         }
 
-        return matchRegex(
-            /(\d+)\s+(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+\b)\s+(\d+)\s+([0-9a-fA-F]+)\(\w+\)\s([\S ]+)$/gim,
+        const players = matchRegex(
+            new RegExp(this.PLAYER_LIST_REGEX),
             data,
         )
             .map((e) => {
@@ -530,6 +538,20 @@ export class RCON extends IStatefulService {
                     lobby: !!e[6]?.includes(' (Lobby)'),
                 };
             }) ?? [];
+
+        // '(0 players in total)' is a legitimate empty list, anything else
+        // means the response did not look the way this parser expects - which
+        // is otherwise indistinguishable from an empty server
+        if (!players.length && !/\(0 players in total\)/i.test(data)) {
+            this.log.log(
+                LogLevel.WARN,
+                'Could not read any player from the rcon player list. '
+                    + 'Please report the following response:',
+                data,
+            );
+        }
+
+        return players;
     }
 
     public async kick(player: string, reason?: string): Promise<void> {

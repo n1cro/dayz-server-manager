@@ -350,6 +350,65 @@ describe('Test class RCON', () => {
 
     });
 
+    it('RCON-players with unverified guid', async () => {
+
+        const rcon = await startRCON();
+
+        socket.send.callsFake((data) => {
+            const buffer = data as any as Buffer;
+            if (buffer.readUInt8(7) != 1) return;
+            const sentCommand = buffer.slice(9).toString();
+
+            if (sentCommand === 'players') {
+                setTimeout(() => {
+                    getSocketListener(socket, 'message')!(createResponse(
+                        createCmdBuffer(
+                            buffer.readUInt8(8),
+                            'Players on server:\n'
+                                + '[#] [IP Address]:[Port] [Ping] [GUID] [Name]\n'
+                                + '--------------------------------------------------\n'
+                                + '0   192.168.1.5:2304      34   a1b2c3d4e5f60718293a4b5c6d7e8f90(OK) Verified\n'
+                                + '1   10.0.0.7:2304         52   00112233445566778899aabbccddeeff(?) Unverified\n'
+                                + '2   10.0.0.9:2304         20   ffeeddccbbaa99887766554433221100(OK) InLobby (Lobby)\n'
+                                + '(3 players in total)',
+                        ),
+                    ));
+                }, 1);
+            }
+        });
+
+        const players = await rcon.getPlayers();
+
+        // a player waiting on guid verification is still on the server
+        expect(players.length).to.equal(3);
+        expect(players.map((x) => x.name)).to.deep.equal(['Verified', 'Unverified', 'InLobby']);
+        expect(players[1].beguid).to.equal('00112233445566778899aabbccddeeff');
+        expect(players[2].lobby).to.be.true;
+
+    });
+
+    it('RCON-players reports an unreadable list', async () => {
+
+        const rcon = await startRCON();
+
+        socket.send.callsFake((data) => {
+            const buffer = data as any as Buffer;
+            if (buffer.readUInt8(7) != 1) return;
+            const sentCommand = buffer.slice(9).toString();
+
+            if (sentCommand === 'players') {
+                setTimeout(() => {
+                    getSocketListener(socket, 'message')!(createResponse(
+                        createCmdBuffer(buffer.readUInt8(8), 'something unexpected'),
+                    ));
+                }, 1);
+            }
+        });
+
+        expect(await rcon.getPlayers()).to.deep.equal([]);
+
+    });
+
     it('RCON-kickAll', async () => {
     
         const rcon = await startRCON();
