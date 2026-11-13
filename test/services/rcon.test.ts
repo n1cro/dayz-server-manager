@@ -5,7 +5,7 @@ import { StubInstance, disableConsole, enableConsole, memfs, sleep, stubClass } 
 import * as path from 'path';
 import * as sinon from 'sinon';
 import { ServerState } from '../../src/types/monitor';
-import { BattleyeConf, RCON } from '../../src/services/rcon';
+import { BattleyeConf, Packet, PacketDirection, PacketType, RCON } from '../../src/services/rcon';
 import { DependencyContainer, Lifecycle, container } from 'tsyringe';
 import { Manager } from '../../src/control/manager';
 import { DiscordBot } from '../../src/services/discord';
@@ -210,6 +210,56 @@ describe('Test class RCON', () => {
         await rcon.kick('123', 'change your name');
         expect(sentCommand).to.equal('kick 123 change your name');
         
+    });
+
+    it('RCON-serializes multi byte commands', () => {
+
+        // the payload is utf-8, so sizing the buffer by string length cuts
+        // every command that is not pure ascii short
+        const command = 'say -1 \u0421\u0435\u0440\u0432\u0435\u0440 \u043f\u0435\u0440\u0435\u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u0441\u044f';
+        const packet = new Packet(
+            PacketType.COMMAND,
+            PacketDirection.REQUEST,
+            {
+                command,
+                sequence: 0,
+            },
+        );
+
+        const serialized = packet.serialize();
+
+        // 6 byte header, then 0xFF, type and sequence
+        expect(serialized.slice(9).toString()).to.equal(command);
+        expect(serialized.length).to.equal(9 + Buffer.byteLength(command));
+
+    });
+
+    it('RCON-sends multi byte messages unharmed', async () => {
+
+        const rcon = await startRCON();
+
+        let sentCommand!: string;
+        socket.send.callsFake((data) => {
+            const buffer = data as any as Buffer;
+            if (buffer.readUInt8(7) != 1) return;
+            sentCommand = buffer.slice(9).toString();
+            setTimeout(() => {
+                getSocketListener(socket, 'message')!(createResponse(
+                    createCmdBuffer(
+                        buffer.readUInt8(8),
+                        'test',
+                    ),
+                ));
+            }, 1);
+        });
+
+        const message = '\u0421\u0435\u0440\u0432\u0435\u0440 \u043f\u0435\u0440\u0435\u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u0441\u044f \u0447\u0435\u0440\u0435\u0437 5 \u043c\u0438\u043d\u0443\u0442';
+        await rcon.global(message);
+        expect(sentCommand).to.equal(`say -1 ${message}`);
+
+        await rcon.kick('1', '\u0421\u043c\u0435\u043d\u0438\u0442\u0435 \u043d\u0438\u043a');
+        expect(sentCommand).to.equal('kick 1 \u0421\u043c\u0435\u043d\u0438\u0442\u0435 \u043d\u0438\u043a');
+
     });
 
     it('RCON-parsePlayerConnected', async () => {

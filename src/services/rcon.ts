@@ -137,7 +137,7 @@ export class Packet extends IPacketAttributes {
                 if (!this.password) {
                     throw new Error('Missing password');
                 }
-                payload = Buffer.alloc(this.password.length + 2);
+                payload = Buffer.alloc(Buffer.byteLength(this.password) + 2);
                 payload.writeUInt8(0xFF, 0);
                 payload.writeUInt8(this.type, 1);
                 payload.write(this.password, 2);
@@ -146,7 +146,7 @@ export class Packet extends IPacketAttributes {
                 if (this.command === undefined || this.command === null) {
                     throw new Error('Missing Command');
                 }
-                payload = Buffer.alloc(this.command.length + 3);
+                payload = Buffer.alloc(Buffer.byteLength(this.command) + 3);
                 payload.writeUInt8(0xFF, 0);
                 payload.writeUInt8(this.type, 1);
                 payload.writeUInt8(this.sequence, 2);
