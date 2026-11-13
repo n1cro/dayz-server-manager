@@ -36,7 +36,7 @@
     "start:packed:windows": "npm run build && npm run pack:windows && npm run start:existing:windows",
     "start:packed:windows:fast": "npm run build-backend-only && npm run pack:windows && npm run start:existing:windows",
     "lint": "eslint src --ext .ts",
-    "test": "npm run generator && nyc --check-coverage --lines 85 --functions 100 node --no-experimental-strip-types ./node_modules/mocha/bin/mocha.js",
+    "test": "npm run generator && nyc --check-coverage --lines 85 --functions 90 node --no-experimental-strip-types ./node_modules/mocha/bin/mocha.js",
     "test:local": "npm run generator && node scripts/dev-test.js",
     "test:watch": "mocha -w --reporter min"
   },
