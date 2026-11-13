@@ -71,6 +71,16 @@
                 </ng-template>
 
                 <div class="action-groups">
+                    <div class="action-group action-group-session" aria-label="Session controls">
+                        <input class="form-control console-input kick-reason" type="text" name="KickReason"
+                            autocomplete="off" aria-label="Kick reason"
+                            placeholder="Kick reason (optional)"
+                            [(ngModel)]="kickReason" />
+                        <button class="btn btn-warning" type="button"
+                            [disabled]="!kickableSlot"
+                            [title]="kickableSlot ? 'Kick the selected player from the server' : 'Only a player who is connected right now can be kicked'"
+                            (click)="kick()">Kick</button>
+                    </div>
                     <div class="action-group action-group-danger" aria-label="Ban controls">
                         <button class="btn btn-danger" type="button"
                             [disabled]="steam64Input.length !== 17 && dayzId.length !== 44" (click)="ban()">Ban</button>

@@ -223,6 +223,18 @@ label {
     text-transform: uppercase;
 }
 
+.action-group-session {
+    flex: 1 1 18rem;
+    align-items: center;
+}
+
+.kick-reason {
+    flex: 1 1 10rem;
+    min-width: 8rem;
+    height: 2.35rem;
+    font-size: .78rem;
+}
+
 .btn-console {
     border: 1px solid var(--ops-border);
     background: var(--ops-panel-alt);

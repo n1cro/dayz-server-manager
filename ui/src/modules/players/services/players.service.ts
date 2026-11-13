@@ -363,6 +363,27 @@ export class PlayersService {
         }
     }
 
+    /**
+     * The battleye slot of a player that is connected right now, or undefined
+     * when they are not. Slots are reused as players come and go, so the one
+     * remembered on a known player is only safe to act on while that player is
+     * still in the current list.
+     */
+    public getOnlineSlot(beguid?: string): string | undefined {
+        if (!beguid) return undefined;
+        return this.currentPlayers.find((x) => x?.beguid === beguid)?.id;
+    }
+
+    public kick(slot: string, reason?: string): Observable<any> {
+        return this.appCommon.apiPOST(
+            `kick`,
+            {
+                player: slot,
+                reason,
+            }
+        );
+    }
+
     public ban(steam64Id: string): Observable<any> {
         return this.appCommon.apiPOST(
             `bantxt`,

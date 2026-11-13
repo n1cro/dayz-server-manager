@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { PlayersService } from '../../services/players.service';
+import { MergedPlayer, PlayersService } from '../../services/players.service';
 import { firstValueFrom, Subscription } from 'rxjs';
 
 @Component({
@@ -11,6 +11,10 @@ import { firstValueFrom, Subscription } from 'rxjs';
 export class PlayersComponent implements OnInit {
 
     public activeTab = 1;
+
+    public kickReason: string = '';
+
+    public selected?: MergedPlayer;
 
     private _steam64Input: string = '';
     public set steam64Input(id: string) {
@@ -53,6 +57,7 @@ export class PlayersComponent implements OnInit {
 
     public ngOnInit(): void {
         this.sub = this.playerService.selected$.subscribe((x) => {
+            this.selected = x;
             this.steam64Input = x?.steamid || '';
         });
     }
@@ -62,6 +67,30 @@ export class PlayersComponent implements OnInit {
             this.sub.unsubscribe();
             this.sub = undefined;
         }
+    }
+
+    /**
+     * Battleye addresses players by their slot, so only a player that is
+     * connected right now can be kicked. The slot is looked up again on every
+     * call rather than taken from the selection: slots are reused, and acting
+     * on a remembered one could hit whoever took it over.
+     */
+    public get kickableSlot(): string | undefined {
+        return this.playerService.getOnlineSlot(this.selected?.beguid);
+    }
+
+    public async kick(): Promise<void> {
+        const slot = this.kickableSlot;
+        if (!slot) return;
+
+        const name = this.selected?.name || this.selected?.ingamename || `player #${slot}`;
+        const reason = this.kickReason?.trim();
+        if (typeof window !== 'undefined' && !window.confirm(
+            reason ? `Kick ${name}? Reason: ${reason}` : `Kick ${name}?`,
+        )) return;
+
+        await firstValueFrom(this.playerService.kick(slot, reason || undefined));
+        this.kickReason = '';
     }
 
     public async ban(): Promise<void> {
